@@ -1,2 +1,4 @@
 libqt5sql5-psql
 qt5-default
+libstdc++.so.6
+libQt5Core.so.5
