@@ -17,7 +17,20 @@ void messageHandler(QtMsgType type, const QMessageLogContext &context, const QSt
 int main(int argc, char *argv[])
 {
     QCoreApplication a(argc, argv);
-    m_logFile.reset(new QFile(QStandardPaths::writableLocation(QStandardPaths::TempLocation)+"/logFile.txt"));
+    QString logFilePath;
+    QString logFileName = "PGworker.log";
+    #ifdef __linux__
+        logFilePath = "/var/log/jobsPG/";
+    #elif _WIN32
+        logFilePath = QStandardPaths::writableLocation(QStandardPaths::TempLocation);
+    #endif
+    QDir log(logFilePath);
+    if(!log.exists())
+    {
+        log.mkdir(logFilePath);
+    }
+    m_logFile.reset(new QFile(logFilePath+logFileName));
+
     m_logFile.data()->open(QFile::Append | QFile::Text);
     //qInstallMessageHandler(messageHandler);
     PGWorker *pgw = new PGWorker();
@@ -42,6 +55,6 @@ void messageHandler(QtMsgType type, const QMessageLogContext &context, const QSt
     case QtFatalMsg:    out << "FTL "; break;
     }
     // Записываем в вывод категорию сообщения и само сообщение
-    out << context.category << ": "<< msg;
+    out << context.category << ": "<< msg <<"\n";
     out.flush();    // Очищаем буферизированные данные
 }

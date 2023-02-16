@@ -74,15 +74,40 @@ struct DataInterval{
             return 1.0f/24/60/60;
         }
     }
+
     QDateTime getNextStart(QDateTime lastRun)
     {
         QDateTime result;
 
         if(Freq.toLower() != "monthly" || Freq.toLower() != "yearly")
         {
+            if(Freq.toLower() == "weekly")
+            {
+                result = lastRun.addDays(7*1*Interval.toInt());
+                //return 1.0f*7;
+            }
+            if(Freq.toLower() == "daily")
+            {
+                result = lastRun.addDays(1*Interval.toInt());
+                //return 1.0f;
+            }
+            if(Freq.toLower() == "hourly")
+            {
+                result = lastRun.addSecs(60*60*Interval.toInt());
+                //return 1.0f/24;
+            }
+            if(Freq.toLower() == "minutely")
+            {
+                result = lastRun.addSecs(60*Interval.toInt());
+                //return 1.0f/24/60;
+            }
+            if(Freq.toLower() == "secondly")
+            {
+                result = lastRun.addSecs(1*Interval.toInt());
+                //return 1.0f/24/60/60;
+            }
 
-            result = lastRun.addDays(period() * Interval.toInt());
-             qDebug()<<result;
+
             if(ByMonth != nullptr)
             {
 
@@ -103,7 +128,7 @@ struct DataInterval{
             {
 
             }
-            if(Freq.toLower() != "secondly")
+            if(Freq.toLower() != "secondly" && Freq.toLower() != "minutely" && Freq.toLower() != "hourly")
             {
                 if(ByHour != nullptr)
                 {
@@ -161,7 +186,7 @@ class Task : public QObject
     Q_OBJECT
 public:
     explicit Task(QObject *parent = nullptr);
-
+    ~Task(){this->thread()->exit();}
     int id() const;
     void setId(int newId);
     QString name() const;
@@ -233,6 +258,7 @@ signals:
     void UpdateLastRun(QDateTime , int);
 public slots:
     void run();
+
 };
 
 #endif // TASK_H

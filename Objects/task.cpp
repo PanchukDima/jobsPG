@@ -178,15 +178,24 @@ void Task::update()
 
             if(lastRun.daysTo(QDateTime::currentDateTime()) > 365)
             {
-                lastRun = QDateTime::currentDateTime();
+                lastRun = QDateTime::currentDateTime().addDays(-1);
 
             }
             while(lastRun < QDateTime::currentDateTime())
             {
+                qDebug()<<QDateTime::currentDateTime();
+                qDebug()<<lastRun;
                 lastRun = dataInterval.getNextStart(lastRun);
 
             }
 
+        }
+        else
+        {
+            while(lastRun < QDateTime::currentDateTime())
+            {
+             lastRun = dataInterval.getNextStart(lastRun);
+            }
         }
     }
 
@@ -199,7 +208,7 @@ bool Task::isStartedInterval()
 
     if(start_date() < getLastRun())
     {
-        qDebug()<<getDataInterval().getNextStart(getLastRun());
+
         if(getDataInterval().getNextStart(getLastRun())<QDateTime::currentDateTime())
         {
             return true;
@@ -225,7 +234,7 @@ void Task::parseIntervalToDataInterval()
 
     QStringList interval_arr = str_interval().split(";");
     foreach (QString interval_param, interval_arr) {
-        qDebug()<<interval_param;
+
         QRegularExpression re("(.*)=(.*)");
         QRegularExpressionMatch match = re.match(interval_param);
 
@@ -256,7 +265,7 @@ void Task::parseIntervalToDataInterval()
             result.BySecond = match.captured(2).toLower();
         }
     }
-    qDebug()<<result.ByHour;
+
     setDataInterval(result);
 }
 
@@ -304,7 +313,7 @@ void Task::setStr_interval(const QString &newStr_interval)
 
 void Task::run()
 {
-    qDebug(logInfo())<<"run "<<QString::number(_id)<<"Status "<<_enabled_job;
+    qDebug(logInfo())<<"Job id: "<<QString::number(_id)<<"Enabled job "<<_enabled_job;
     QSqlDatabase ThreadDB = QSqlDatabase::addDatabase("QPSQL", getConnStr().name);
     ThreadDB.setHostName(getConnStr().host);
     ThreadDB.setUserName(getConnStr().username);
@@ -315,27 +324,36 @@ void Task::run()
         while(true){
             while(_enabled_job)
             {
-                QThread::sleep(10);
-                //setLastRun(QDateTime::currentDateTime());
-                //work process from time
-                if(isStartedInterval())
-                {
-                    qDebug(logInfo())<<"run "<<QString::number(_id);
-                    QSqlDatabase db = QSqlDatabase::database(getConnStr().name);
+                QThread::sleep(1);
 
+                if(isStartedInterval())
+                {                    
+                    qDebug(logInfo())<<"Execute action task id: "<<QString::number(_id)<<"DateTime Start:"<<QDateTime::currentDateTime();
+                    setLastRun(QDateTime::currentDateTime());
+                    QSqlDatabase db = QSqlDatabase::database(getConnStr().name);
                     if(db.open())
                     {
                         QSqlQuery query =  QSqlQuery(db);
+                        qDebug(logDebug())<<"Sql execute: "<<action();
+                        query.exec("UPDATE dbms_scheduler.jobs SET pid=pg_backend_pid() WHERE id="+QString::number(_id)+";");
                         query.exec(action());
 
                         if(query.lastError().isValid())
                         {
-                            qDebug(logWarning())<<getConnStr().name<<"Error:"<<query.lastError();
+                            qDebug(logCritical())<<getConnStr().name<<"SQL Error:"<<query.lastError();
+                        }
+                        query.exec("UPDATE dbms_scheduler.jobs SET pid=NULL WHERE id="+QString::number(_id)+";");
+                        if(query.lastError().isValid())
+                        {
+                            qDebug(logCritical())<<getConnStr().name<<"SQL Error:"<<query.lastError();
                         }
                     }
-                    setLastRun(QDateTime::currentDateTime());
+                    qDebug(logInfo())<<"end Work task id: "<<QString::number(_id)<<"DateTime End:"<<QDateTime::currentDateTime();
+
                 }
             }
         }
     }
 }
+
+

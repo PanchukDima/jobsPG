@@ -34,7 +34,9 @@ private:
 
     void getListTasks();
     void startTasks();
+    void startTask(int p_id);
     void deploy();
+    void deployDB();
 
 
     QList<WorkerObject*> workers;
