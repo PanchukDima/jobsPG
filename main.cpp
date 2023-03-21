@@ -17,6 +17,7 @@ void messageHandler(QtMsgType type, const QMessageLogContext &context, const QSt
 int main(int argc, char *argv[])
 {
     QCoreApplication a(argc, argv);
+
     QString logFilePath;
     QString logFileName = "PGworker.log";
     #ifdef __linux__
