@@ -1,7 +1,7 @@
 QT -= gui
 QT += sql
 
-CONFIG += c++17 console
+CONFIG += c++17
 CONFIG -= app_bundle
 
 linux-g++ | linux-g++-64 | linux-g++-32 {
