@@ -10,7 +10,7 @@ void PGWorker::init()
 {
     deploy();
     QString fileConfig = QStandardPaths::standardLocations(QStandardPaths::AppConfigLocation)[1]+"/connection";
-    qDebug()<<fileConfig;
+    qDebug(logInfo())<<"File config is use"<<fileConfig;
     QSettings settings(fileConfig, QSettings::IniFormat);
     QSqlDatabase db = QSqlDatabase::addDatabase("QPSQL");
     bool eventNot= db.driver()->hasFeature(QSqlDriver::EventNotifications);
@@ -72,6 +72,7 @@ void PGWorker::startTasks()
         connect(worker->thread, SIGNAL(started()), worker->task,SLOT(run()));
         connect(worker->task,SIGNAL(UpdateLastRun(QDateTime,int)),SLOT(UpdateLastRunTask(QDateTime,int)));
         connect(worker->task,SIGNAL(finished()),worker->task,SLOT(deleteLater()));
+
         worker->thread->start();
     }
 
@@ -280,6 +281,30 @@ void PGWorker::UpdateLastRunTask(QDateTime lastRun, int id_task)
     if(query.lastError().isValid())
     {
         qDebug(logWarning())<<query.lastError();
+        qDebug(logCritical())<<query.lastError().nativeErrorCode();
+        SystemEventHandler(EventTask::LostConnect);
     }
 
+}
+
+void PGWorker::SystemEventHandler(EventTask event)
+{
+    switch (event) {
+    case EventTask::LostConnect:
+    {
+        QSqlDatabase db = QSqlDatabase::database();
+        if(!db.open())
+        {
+            qDebug(logInfo()) << "Trying to reconnect...";
+            db.close();
+            if (db.open()) {
+                qDebug(logInfo()) << "Reconnected!";
+            } else {
+                qDebug(logCritical()) << "Could not reconnect to the database.";
+            }
+        }
+
+        break;
+    }
+    }
 }

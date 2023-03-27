@@ -19,7 +19,7 @@ int main(int argc, char *argv[])
     QCoreApplication a(argc, argv);
 
     QString logFilePath;
-    QString logFileName = "PGworker.log";
+    QString logFileName = "PGworker"+QDate::currentDate().toString("dd-mm-yyyy")+".log";
     #ifdef __linux__
         logFilePath = "/var/log/jobsPG/";
     #elif _WIN32

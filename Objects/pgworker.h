@@ -21,7 +21,6 @@ struct WorkerObject
 {
     QThread *thread;
     Task * task;
-
 };
 
 class PGWorker : public QObject
@@ -39,12 +38,14 @@ private:
     void deployDB();
 
 
+
     QList<WorkerObject*> workers;
 
 private slots:
 
     void NotifyHandler(QString, QSqlDriver::NotificationSource,QVariant);
     void UpdateLastRunTask(QDateTime lastRun, int id_task);
+    void SystemEventHandler(EventTask);
 
 signals:
 

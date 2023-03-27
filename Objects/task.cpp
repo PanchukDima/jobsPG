@@ -331,7 +331,18 @@ void Task::run()
                     qDebug(logInfo())<<"Execute action task id: "<<QString::number(_id)<<"DateTime Start:"<<QDateTime::currentDateTime();
                     setLastRun(QDateTime::currentDateTime());
                     QSqlDatabase db = QSqlDatabase::database(getConnStr().name);
-                    if(db.open())
+                    if(!db.open())
+                    {
+                        qDebug(logInfo()) << "Trying to reconnect...";
+                        db.close();
+                        if (db.open()) {
+                            qDebug(logInfo()) << "Reconnected!";
+                        } else {
+                            qDebug(logCritical()) << "Could not reconnect to the database.";
+                        }
+                        emit SystemEvent(EventTask::LostConnect);
+                    }
+                    else
                     {
                         QSqlQuery query =  QSqlQuery(db);
                         qDebug(logDebug())<<"Sql execute: "<<action();
@@ -341,6 +352,9 @@ void Task::run()
                         if(query.lastError().isValid())
                         {
                             qDebug(logCritical())<<getConnStr().name<<"SQL Error:"<<query.lastError();
+                            qDebug(logCritical())<<query.lastError().nativeErrorCode();
+                            emit SystemEvent(EventTask::LostConnect);
+                            continue;
                         }
                         query.exec("UPDATE dbms_scheduler.jobs SET pid=NULL WHERE id="+QString::number(_id)+";");
                         if(query.lastError().isValid())
@@ -348,11 +362,23 @@ void Task::run()
                             qDebug(logCritical())<<getConnStr().name<<"SQL Error:"<<query.lastError();
                         }
                     }
+
                     qDebug(logInfo())<<"end Work task id: "<<QString::number(_id)<<"DateTime End:"<<QDateTime::currentDateTime();
 
                 }
             }
         }
+    }
+    else
+    {
+        qDebug(logInfo()) << "Trying to reconnect...";
+        ThreadDB.close();
+        if (ThreadDB.open()) {
+            qDebug(logInfo()) << "Reconnected!";
+        } else {
+            qDebug(logCritical()) << "Could not reconnect to the database.";
+        }
+        emit SystemEvent(EventTask::LostConnect);
     }
 }
 

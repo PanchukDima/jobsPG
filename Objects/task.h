@@ -23,6 +23,11 @@ struct ConnectionString
     QString Database;
 };
 
+enum EventTask
+{
+    LostConnect,
+};
+
 struct DataInterval{
 
     DataInterval(){
@@ -256,6 +261,7 @@ private:
 signals:
     void finished();
     void UpdateLastRun(QDateTime , int);
+    void SystemEvent(EventTask);
 public slots:
     void run();
 
