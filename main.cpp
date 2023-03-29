@@ -33,7 +33,7 @@ int main(int argc, char *argv[])
     m_logFile.reset(new QFile(logFilePath+logFileName));
 
     m_logFile.data()->open(QFile::Append | QFile::Text);
-    //qInstallMessageHandler(messageHandler);
+    qInstallMessageHandler(messageHandler);
     PGWorker *pgw = new PGWorker();
     pgw->init();
 
