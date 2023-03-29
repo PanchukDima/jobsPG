@@ -208,10 +208,10 @@ bool Task::isStartedInterval()
 
     if(start_date() < getLastRun())
     {
-
-        if(getDataInterval().getNextStart(getLastRun())<QDateTime::currentDateTime())
-        {
-            return true;
+        QDateTime NextDateTimeStart = getDataInterval().getNextStart(getLastRun());
+        if(NextDateTimeStart<QDateTime::currentDateTime())
+        {            
+                return true;
         }
     }
     else
@@ -223,9 +223,7 @@ bool Task::isStartedInterval()
 
 void Task::getNextStart()
 {
-    //господи
     qDebug()<<getDataInterval().getNextStart(getLastRun());
-
 }
 
 void Task::parseIntervalToDataInterval()
@@ -325,7 +323,6 @@ void Task::run()
             while(_enabled_job)
             {
                 QThread::sleep(1);
-
                 if(isStartedInterval())
                 {                    
                     qDebug(logInfo())<<"Execute action task id: "<<QString::number(_id)<<"DateTime Start:"<<QDateTime::currentDateTime();

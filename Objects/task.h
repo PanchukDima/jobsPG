@@ -82,37 +82,10 @@ struct DataInterval{
 
     QDateTime getNextStart(QDateTime lastRun)
     {
-        QDateTime result;
+        QDateTime result = lastRun;
 
         if(Freq.toLower() != "monthly" || Freq.toLower() != "yearly")
         {
-            if(Freq.toLower() == "weekly")
-            {
-                result = lastRun.addDays(7*1*Interval.toInt());
-                //return 1.0f*7;
-            }
-            if(Freq.toLower() == "daily")
-            {
-                result = lastRun.addDays(1*Interval.toInt());
-                //return 1.0f;
-            }
-            if(Freq.toLower() == "hourly")
-            {
-                result = lastRun.addSecs(60*60*Interval.toInt());
-                //return 1.0f/24;
-            }
-            if(Freq.toLower() == "minutely")
-            {
-                result = lastRun.addSecs(60*Interval.toInt());
-                //return 1.0f/24/60;
-            }
-            if(Freq.toLower() == "secondly")
-            {
-                result = lastRun.addSecs(1*Interval.toInt());
-                //return 1.0f/24/60/60;
-            }
-
-
             if(ByMonth != nullptr)
             {
 
@@ -147,7 +120,7 @@ struct DataInterval{
                     time.setHMS(0, time.minute(), time.second());
                     result.setTime(time);
                 }
-                if(ByMinute != nullptr || ByMinute != "")
+                if(ByMinute != nullptr)
                 {
                     QTime time = result.time();
                     time.setHMS(time.hour(), ByMinute.toInt(), time.second());
@@ -181,6 +154,37 @@ struct DataInterval{
             {
 
             }
+
+            if(result < QDateTime::currentDateTime().addSecs(-2))
+            {
+                if(Freq.toLower() == "weekly")
+                {
+                    result = lastRun.addDays(7*1*Interval.toInt());
+                    //return 1.0f*7;
+                }
+                if(Freq.toLower() == "daily")
+                {
+
+                    result = lastRun.addDays(1*Interval.toInt());
+                    //return 1.0f;
+                }
+                if(Freq.toLower() == "hourly")
+                {
+                    result = lastRun.addSecs(60*60*Interval.toInt());
+                    //return 1.0f/24;
+                }
+                if(Freq.toLower() == "minutely")
+                {
+                    result = lastRun.addSecs(60*Interval.toInt());
+                    //return 1.0f/24/60;
+                }
+                if(Freq.toLower() == "secondly")
+                {
+                    result = lastRun.addSecs(1*Interval.toInt());
+                    //return 1.0f/24/60/60;
+                }
+            }
+
         }
         return result;
     }
