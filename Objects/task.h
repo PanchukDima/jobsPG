@@ -155,7 +155,7 @@ struct DataInterval{
 
             }
 
-            if(result < QDateTime::currentDateTime().addSecs(-2))
+            if(result <= QDateTime::currentDateTime())
             {
                 if(Freq.toLower() == "weekly")
                 {
@@ -237,8 +237,12 @@ public:
 
     void parseIntervalToDataInterval();
 
+    void saveLogMessageDB(QString message, QSqlDatabase db);
+
     ConnectionString getConnStr() const;
     void setConnStr(const ConnectionString &newConnStr);
+
+    bool CheckLastRunFromPeriod(QDateTime lastRun);
 
 private:
         int _id;
@@ -259,6 +263,7 @@ private:
         QDateTime lastRun;
         QDateTime nextRun;
         ConnectionString ConnStr;
+        bool _saveLogDB;
 
 
 

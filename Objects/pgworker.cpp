@@ -9,7 +9,7 @@ PGWorker::PGWorker(QObject *parent)
 void PGWorker::init()
 {
     deploy();
-    QString fileConfig = QStandardPaths::standardLocations(QStandardPaths::AppConfigLocation)[1]+"/connection";
+    QString fileConfig = getFileConfigPath();
     qDebug(logInfo())<<"File config is use"<<fileConfig;
     QSettings settings(fileConfig, QSettings::IniFormat);
     QSqlDatabase db = QSqlDatabase::addDatabase("QPSQL");
@@ -20,6 +20,7 @@ void PGWorker::init()
     db.setPassword(settings.value("password").toString());
     db.setPort(settings.value("port").toInt());
     db.setDatabaseName(settings.value("databasename").toString());
+    db.setConnectOptions("application_name=JobsPG");
     if(db.open())
     {
         deployDB();
@@ -31,8 +32,13 @@ void PGWorker::init()
     }
     else
     {
-        qDebug(logCritical())<<db.lastError();
+        qDebug(logCritical())<<__FILE__<<__LINE__ <<db.lastError();
     }
+}
+
+QString PGWorker::getFileConfigPath()
+{
+    return QStandardPaths::standardLocations(QStandardPaths::AppConfigLocation)[1]+"/connection";
 }
 
 
@@ -121,7 +127,7 @@ void PGWorker::deployDB()
     query.exec("select count(*) from pg_namespace where nspname = 'dbms_scheduler'");
     if(query.lastError().isValid())
     {
-        qDebug(logCritical())<<"Check exists DB schema 'dbms_scheduler' failed\n"<<query.lastError();
+        qDebug(logCritical())<<__FILE__<<__LINE__ <<"Check exists DB schema 'dbms_scheduler' failed\n"<<query.lastError();
     }
     while(query.next())
     {
@@ -130,7 +136,7 @@ void PGWorker::deployDB()
             query.exec("CREATE SCHEMA dbms_scheduler AUTHORIZATION postgres;");
             if(query.lastError().isValid())
             {
-                qDebug(logCritical())<<"Create DB schema 'dbms_scheduler' failed\n"<<query.lastError();
+                qDebug(logCritical())<<__FILE__<<__LINE__ <<"Create DB schema 'dbms_scheduler' failed\n"<<query.lastError();
             }
         }
         else
@@ -141,7 +147,7 @@ void PGWorker::deployDB()
     query.exec("select count(*) from pg_tables pt where pt.schemaname = 'dbms_scheduler' and pt.tablename = 'jobs'");
     if(query.lastError().isValid())
         {
-            qDebug(logCritical())<<"Check exists DB table 'dbms_scheduler.jobs' failed\n"<<query.lastError();
+            qDebug(logCritical())<<__FILE__<<__LINE__ <<"Check exists DB table 'dbms_scheduler.jobs' failed\n"<<query.lastError();
         }
     while(query.next())
     {
@@ -178,7 +184,7 @@ void PGWorker::deployDB()
                            " dbms_scheduler.jobs for each row execute function dbms_scheduler.trigger_event_jobs();");
             if(query.lastError().isValid())
             {
-                qDebug(logCritical())<<"Create DB table 'dbms_scheduler.jobs' failed\n"<<query.lastError();
+                qDebug(logCritical())<<__FILE__<<__LINE__ <<"Create DB table 'dbms_scheduler.jobs' failed\n"<<query.lastError();
             }
         }
         else
@@ -192,7 +198,7 @@ void PGWorker::deployDB()
                 }
                 else
                 {
-                    qDebug(logCritical())<<"DB table 'dbms_scheduler.jobs' incorrect? please update"<<query.value(0).toInt();
+                    qDebug(logCritical())<<__FILE__<<__LINE__ <<"DB table 'dbms_scheduler.jobs' incorrect? please update"<<query.value(0).toInt();
                     exit(0);
                 }
             }
@@ -204,17 +210,17 @@ void PGWorker::deployDB()
              "  and pn.nspname iLIKE  'dbms_scheduler'");
     if(query.lastError().isValid())
     {
-        qDebug(logCritical())<<"Check exists DB Trigger 'dbms_scheduler.trigger_event_jobs', failed";
+        qDebug(logCritical())<<__FILE__<<__LINE__ <<"Check exists DB Trigger 'dbms_scheduler.trigger_event_jobs', failed";
     }
     while (query.next()) {
         if(query.value(0).toInt() == 1)
         {
-             qDebug(logInfo())<<"DB Trigger 'dbms_scheduler.trigger_event_jobs' exist";
+             qDebug(logInfo())<<__FILE__<<__LINE__ <<"DB Trigger 'dbms_scheduler.trigger_event_jobs' exist";
         }
         else
         {
             qDebug(logInfo())<<"DB Trigger 'dbms_scheduler.trigger_event_jobs' NOT exist";
-            qDebug(logCritical())<<"Deploy DB Trigger 'dbms_scheduler.trigger_event_jobs'";
+            qDebug(logCritical())<<__FILE__<<__LINE__ <<"Deploy DB Trigger 'dbms_scheduler.trigger_event_jobs'";
             exit(0);
         }
 
@@ -280,8 +286,8 @@ void PGWorker::UpdateLastRunTask(QDateTime lastRun, int id_task)
     query.exec();
     if(query.lastError().isValid())
     {
-        qDebug(logWarning())<<query.lastError();
-        qDebug(logCritical())<<query.lastError().nativeErrorCode();
+        qDebug(logWarning())<<__FILE__<<__LINE__<<query.lastError();
+        qDebug(logCritical())<<__FILE__<<__LINE__<<query.lastError().nativeErrorCode();
         SystemEventHandler(EventTask::LostConnect);
     }
 
@@ -297,10 +303,13 @@ void PGWorker::SystemEventHandler(EventTask event)
         {
             qDebug(logInfo()) << "Trying to reconnect...";
             db.close();
-            if (db.open()) {
-                qDebug(logInfo()) << "Reconnected!";
-            } else {
-                qDebug(logCritical()) << "Could not reconnect to the database.";
+            while(!db.open()){
+                if (db.open()) {
+                    qDebug(logInfo()) << "Reconnected!";
+                } else {
+                    qDebug(logCritical())<<__FILE__<<__LINE__ << "Could not reconnect to the database. Next try in 2 seconds....";
+                }
+                QThread::sleep(2);
             }
         }
 

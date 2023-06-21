@@ -183,8 +183,7 @@ void Task::update()
             }
             while(lastRun < QDateTime::currentDateTime())
             {
-                qDebug()<<QDateTime::currentDateTime();
-                qDebug()<<lastRun;
+
                 lastRun = dataInterval.getNextStart(lastRun);
 
             }
@@ -192,10 +191,7 @@ void Task::update()
         }
         else
         {
-            while(lastRun < QDateTime::currentDateTime())
-            {
-             lastRun = dataInterval.getNextStart(lastRun);
-            }
+            nextRun = dataInterval.getNextStart(lastRun);
         }
     }
 
@@ -208,8 +204,12 @@ bool Task::isStartedInterval()
 
     if(start_date() < getLastRun())
     {
-        QDateTime NextDateTimeStart = getDataInterval().getNextStart(getLastRun());
-        if(NextDateTimeStart<QDateTime::currentDateTime())
+
+        if(CheckLastRunFromPeriod(getLastRun()) && getLastRun()>nextRun)
+        {
+            nextRun = getDataInterval().getNextStart(getLastRun());
+        }
+        if(nextRun<QDateTime::currentDateTime())
         {            
                 return true;
         }
@@ -223,7 +223,7 @@ bool Task::isStartedInterval()
 
 void Task::getNextStart()
 {
-    qDebug()<<getDataInterval().getNextStart(getLastRun());
+
 }
 
 void Task::parseIntervalToDataInterval()
@@ -236,35 +236,49 @@ void Task::parseIntervalToDataInterval()
         QRegularExpression re("(.*)=(.*)");
         QRegularExpressionMatch match = re.match(interval_param);
 
-        qDebug()<<match.captured(1)<<" "<<match.captured(2).toLower();
-        if(match.captured(1) == "Freq")
+        qDebug(logInfo())<<match.captured(1)<<" "<<match.captured(2).toLower();
+        if(match.captured(1).toLower()== "freq")
         {
             result.Freq = match.captured(2).toLower();
         }
-        if(match.captured(1) == "Interval")
+        if(match.captured(1).toLower() == "interval")
         {
             result.Interval = match.captured(2).toLower();
         }
 
-        if(match.captured(1) == "ByDay")
+        if(match.captured(1).toLower() == "byday")
         {
             result.ByWeekDay = match.captured(2).toLower();
         }
-        if(match.captured(1) == "ByHour")
+        if(match.captured(1).toLower() == "byhour")
         {
             result.ByHour = match.captured(2).toLower();
         }
-        if(match.captured(1) == "ByMinute")
+        if(match.captured(1).toLower() == "byminute")
         {
             result.ByMinute = match.captured(2).toLower();
         }
-        if(match.captured(1) == "BySecond")
+        if(match.captured(1).toLower() == "bysecond")
         {
             result.BySecond = match.captured(2).toLower();
         }
     }
 
     setDataInterval(result);
+}
+
+void Task::saveLogMessageDB(QString message, QSqlDatabase db)
+{
+
+    if(db.open())
+    {
+       QSqlQuery *query = new QSqlQuery(db);
+       query->exec("INSERT INTO dbms_scheduler.log_jobs (job_id, log_text) VALUES("+QString::number(_id)+", '"+message.simplified()+"')");
+       if(query->lastError().isValid())
+       {
+           qDebug(logCritical())<<__FILE__<<__LINE__ <<"save log error SqlError"<< query->lastError().text() <<" "<<query->lastQuery();
+       }
+    }
 }
 
 ConnectionString Task::getConnStr() const
@@ -275,6 +289,52 @@ ConnectionString Task::getConnStr() const
 void Task::setConnStr(const ConnectionString &newConnStr)
 {
     ConnStr = newConnStr;
+}
+
+bool Task::CheckLastRunFromPeriod(QDateTime lastRun)
+{
+
+    QString Freq = getDataInterval().Freq.toLower();
+
+    QTime curTime = QTime::currentTime();
+    QDateTime curDateTime = QDateTime::currentDateTime();
+    if(Freq.toLower() == "weekly")
+    {
+        return false;
+    }
+    if(Freq.toLower() == "daily")
+    {
+        QTime startTime = curTime;
+        QTime endTime = curTime;
+        startTime.setHMS(0,0,0);
+        endTime.setHMS(23,59,59);
+        QDateTime start = curDateTime;
+        QDateTime end = curDateTime;
+        start.setTime(startTime);
+        end.setTime(endTime);
+
+        if((lastRun > start || lastRun < end))
+        {
+            return true;
+        }
+        else
+        {
+            return false;
+        }
+
+    }
+    if(Freq.toLower() == "hourly")
+    {
+        return false;
+    }
+    if(Freq.toLower() == "minutely")
+    {
+        return false;
+    }
+    if(Freq.toLower() == "secondly")
+    {
+        return false;
+    }
 }
 
 DataInterval Task::getDataInterval() const
@@ -295,6 +355,7 @@ QDateTime Task::getLastRun() const
 void Task::setLastRun(const QDateTime &newLastRun)
 {
     lastRun = newLastRun;
+    nextRun = getDataInterval().getNextStart(newLastRun);
     emit UpdateLastRun(lastRun, _id);
 
 }
@@ -318,7 +379,11 @@ void Task::run()
     ThreadDB.setPassword(getConnStr().password);
     ThreadDB.setPort(getConnStr().port);
     ThreadDB.setDatabaseName(getConnStr().Database);
+    QString application_name = "application_name=Job_"+getConnStr().name;
+    ThreadDB.setConnectOptions(application_name);
+
     if(ThreadDB.open()){
+        saveLogMessageDB("Job Start", ThreadDB);
         while(true){
             while(_enabled_job)
             {
@@ -330,17 +395,19 @@ void Task::run()
                     QSqlDatabase db = QSqlDatabase::database(getConnStr().name);
                     if(!db.open())
                     {
-                        qDebug(logInfo()) << "Trying to reconnect...";
-                        db.close();
-                        if (db.open()) {
-                            qDebug(logInfo()) << "Reconnected!";
-                        } else {
-                            qDebug(logCritical()) << "Could not reconnect to the database.";
+                        while(!db.open()){
+                            if (db.open()) {
+                                qDebug(logInfo()) << "Reconnected!";
+                            } else {
+                                qDebug(logCritical()) <<__FILE__<<__LINE__ << "Could not reconnect to the database. Next try in 2 seconds....";
+                            }
+                            QThread::sleep(2);
                         }
                         emit SystemEvent(EventTask::LostConnect);
                     }
                     else
                     {
+                        setLastRun(QDateTime::currentDateTime());
                         QSqlQuery query =  QSqlQuery(db);
                         qDebug(logDebug())<<"Sql execute: "<<action();
                         query.exec("UPDATE dbms_scheduler.jobs SET pid=pg_backend_pid() WHERE id="+QString::number(_id)+";");
@@ -348,15 +415,16 @@ void Task::run()
 
                         if(query.lastError().isValid())
                         {
-                            qDebug(logCritical())<<getConnStr().name<<"SQL Error:"<<query.lastError();
-                            qDebug(logCritical())<<query.lastError().nativeErrorCode();
-                            emit SystemEvent(EventTask::LostConnect);
+                            qDebug(logCritical())<<__FILE__<<__LINE__ <<getConnStr().name<<"SQL Error:"<<query.lastError();
+                            qDebug(logCritical())<<__FILE__<<__LINE__ <<query.lastError().nativeErrorCode();
+                            saveLogMessageDB(query.lastError().databaseText(), ThreadDB);
+                            //emit SystemEvent(EventTask::LostConnect);
                             continue;
                         }
                         query.exec("UPDATE dbms_scheduler.jobs SET pid=NULL WHERE id="+QString::number(_id)+";");
                         if(query.lastError().isValid())
                         {
-                            qDebug(logCritical())<<getConnStr().name<<"SQL Error:"<<query.lastError();
+                            qDebug(logCritical())<<__FILE__<<__LINE__ <<getConnStr().name<<"SQL Error:"<<query.lastError();
                         }
                     }
 
@@ -370,10 +438,13 @@ void Task::run()
     {
         qDebug(logInfo()) << "Trying to reconnect...";
         ThreadDB.close();
-        if (ThreadDB.open()) {
-            qDebug(logInfo()) << "Reconnected!";
-        } else {
-            qDebug(logCritical()) << "Could not reconnect to the database.";
+        while(!ThreadDB.open()){
+            if (ThreadDB.open()) {
+                qDebug(logInfo()) << "Reconnected!";
+            } else {
+                qDebug(logCritical())<<__FILE__<<__LINE__  << "Could not reconnect to the database. Next try in 2 seconds";
+            }
+            QThread::sleep(2);
         }
         emit SystemEvent(EventTask::LostConnect);
     }

@@ -29,6 +29,7 @@ class PGWorker : public QObject
 public:
     explicit PGWorker(QObject *parent = nullptr);
     void init();
+    QString getFileConfigPath();
 private:
 
     void getListTasks();

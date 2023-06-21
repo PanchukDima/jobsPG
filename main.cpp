@@ -7,10 +7,12 @@
 #include <QDateTime>
 #include <QLoggingCategory>
 #include <QStandardPaths>
+#include <QSettings>
 
 // Умный указатель на файл логирования
 QScopedPointer<QFile>   m_logFile;
-
+QString loggerLevel;
+QString version = "0.5";
 // Объявляение обработчика
 void messageHandler(QtMsgType type, const QMessageLogContext &context, const QString &msg);
 
@@ -33,8 +35,20 @@ int main(int argc, char *argv[])
     m_logFile.reset(new QFile(logFilePath+logFileName));
 
     m_logFile.data()->open(QFile::Append | QFile::Text);
-    qInstallMessageHandler(messageHandler);
     PGWorker *pgw = new PGWorker();
+    QString configPath = pgw->getFileConfigPath();
+    QSettings settings(configPath, QSettings::IniFormat);
+    if(settings.value("logLevel").toString() != "")
+    {
+        loggerLevel = settings.value("logLevel").toString();
+    }
+    else
+    {
+        loggerLevel = "INF";
+    }
+
+    qInstallMessageHandler(messageHandler);
+
     pgw->init();
 
     return a.exec();
@@ -45,17 +59,33 @@ void messageHandler(QtMsgType type, const QMessageLogContext &context, const QSt
     // Открываем поток записи в файл
     QTextStream out(m_logFile.data());
     // Записываем дату записи
-    out << QDateTime::currentDateTime().toString("yyyy-MM-dd hh:mm:ss.zzz ");
-    // По типу определяем, к какому уровню относится сообщение
-    switch (type)
+    bool iswrite = false;
+    if(loggerLevel == "INF" && context.category == "Info")
     {
-    case QtInfoMsg:     out << "INF "; break;
-    case QtDebugMsg:    out << "DBG "; break;
-    case QtWarningMsg:  out << "WRN "; break;
-    case QtCriticalMsg: out << "CRT "; break;
-    case QtFatalMsg:    out << "FTL "; break;
+       iswrite = true;
     }
-    // Записываем в вывод категорию сообщения и само сообщение
-    out << context.category << ": "<< msg <<"\n";
-    out.flush();    // Очищаем буферизированные данные
+    if(loggerLevel == "DBG")
+    {
+        iswrite = true;
+    }
+    if(iswrite){
+        out << QDateTime::currentDateTime().toString("yyyy-MM-dd hh:mm:ss.zzz ");
+        // По типу определяем, к какому уровню относится сообщение
+        switch (type)
+        {
+        case QtInfoMsg:     out << "INF "; break;
+        case QtDebugMsg:    out << "DBG "; break;
+        case QtWarningMsg:  out << "WRN "; break;
+        case QtCriticalMsg: out << "CRT "; break;
+        case QtFatalMsg:    out << "FTL "; break;
+        }
+
+        out << context.category <<":"<<"Ver."<<version <<":"<< ": "<< msg <<"\n";
+        out.flush();
+    }
+    //if(loggerLevel == "DBG")
+//    {
+//        out << context.category <<":"<<"Ver."<<version <<":"<< ": "<< msg <<"\n";
+//    }
+      // Очищаем буферизированные данные
 }
