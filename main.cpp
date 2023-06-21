@@ -47,7 +47,12 @@ int main(int argc, char *argv[])
         loggerLevel = "INF";
     }
 
-    qInstallMessageHandler(messageHandler);
+    if (a.arguments().at(1) != "console")
+    {
+        qDebug()<<"No console";
+        qInstallMessageHandler(messageHandler);
+    }
+
 
     pgw->init();
 
