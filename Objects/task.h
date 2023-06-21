@@ -244,6 +244,9 @@ public:
 
     bool CheckLastRunFromPeriod(QDateTime lastRun);
 
+    void CloseConnection(QSqlDatabase db);
+    QSqlDatabase OpenConnection();
+
 private:
         int _id;
         QString _name;

@@ -337,6 +337,28 @@ bool Task::CheckLastRunFromPeriod(QDateTime lastRun)
     }
 }
 
+void Task::CloseConnection(QSqlDatabase db)
+{
+    qDebug()<<"Close Connection";
+    db.close();
+    //QSqlDatabase::removeDatabase( QSqlDatabase::defaultConnection );
+    return;
+}
+
+QSqlDatabase Task::OpenConnection()
+{
+    qDebug()<<"Open Connection";
+    QSqlDatabase ThreadDB = QSqlDatabase::addDatabase("QPSQL", getConnStr().name);
+    ThreadDB.setHostName(getConnStr().host);
+    ThreadDB.setUserName(getConnStr().username);
+    ThreadDB.setPassword(getConnStr().password);
+    ThreadDB.setPort(getConnStr().port);
+    ThreadDB.setDatabaseName(getConnStr().Database);
+    QString application_name = "application_name=Job_"+getConnStr().name;
+    ThreadDB.setConnectOptions(application_name);
+    return ThreadDB;
+}
+
 DataInterval Task::getDataInterval() const
 {
     return dataInterval;
@@ -373,81 +395,66 @@ void Task::setStr_interval(const QString &newStr_interval)
 void Task::run()
 {
     qDebug(logInfo())<<"Job id: "<<QString::number(_id)<<"Enabled job "<<_enabled_job;
-    QSqlDatabase ThreadDB = QSqlDatabase::addDatabase("QPSQL", getConnStr().name);
-    ThreadDB.setHostName(getConnStr().host);
-    ThreadDB.setUserName(getConnStr().username);
-    ThreadDB.setPassword(getConnStr().password);
-    ThreadDB.setPort(getConnStr().port);
-    ThreadDB.setDatabaseName(getConnStr().Database);
-    QString application_name = "application_name=Job_"+getConnStr().name;
-    ThreadDB.setConnectOptions(application_name);
-
-    if(ThreadDB.open()){
-        saveLogMessageDB("Job Start", ThreadDB);
         while(true){
-            while(_enabled_job)
-            {
-                QThread::sleep(1);
-                if(isStartedInterval())
-                {                    
-                    qDebug(logInfo())<<"Execute action task id: "<<QString::number(_id)<<"DateTime Start:"<<QDateTime::currentDateTime();
-                    setLastRun(QDateTime::currentDateTime());
-                    QSqlDatabase db = QSqlDatabase::database(getConnStr().name);
-                    if(!db.open())
+                while(_enabled_job)
+                {
+                    QThread::sleep(1);
+                    if(isStartedInterval())
                     {
-                        while(!db.open()){
-                            if (db.open()) {
-                                qDebug(logInfo()) << "Reconnected!";
-                            } else {
-                                qDebug(logCritical()) <<__FILE__<<__LINE__ << "Could not reconnect to the database. Next try in 2 seconds....";
+                        QSqlDatabase ThreadDB = OpenConnection();
+                        if(ThreadDB.open())
+                        {
+                            qDebug(logInfo())<<"Execute action task id: "<<QString::number(_id)<<"DateTime Start:"<<QDateTime::currentDateTime();
+                            setLastRun(QDateTime::currentDateTime());
+                            QSqlDatabase db = QSqlDatabase::database(getConnStr().name);
+                            if(!db.open())
+                            {
+                                while(!db.open()){
+                                    if (db.open()) {
+                                        qDebug(logInfo()) << "Reconnected!";
+                                    } else {
+                                        qDebug(logCritical()) <<__FILE__<<__LINE__ << "Could not reconnect to the database. Next try in 2 seconds....";
+                                    }
+                                    QThread::sleep(2);
+                                }
+                                emit SystemEvent(EventTask::LostConnect);
                             }
-                            QThread::sleep(2);
-                        }
-                        emit SystemEvent(EventTask::LostConnect);
-                    }
-                    else
-                    {
-                        setLastRun(QDateTime::currentDateTime());
-                        QSqlQuery query =  QSqlQuery(db);
-                        qDebug(logDebug())<<"Sql execute: "<<action();
-                        query.exec("UPDATE dbms_scheduler.jobs SET pid=pg_backend_pid() WHERE id="+QString::number(_id)+";");
-                        query.exec(action());
+                            else
+                            {
+                                setLastRun(QDateTime::currentDateTime());
+                                QSqlQuery query =  QSqlQuery(db);
+                                qDebug(logDebug())<<"Sql execute: "<<action();
+                                query.exec("UPDATE dbms_scheduler.jobs SET pid=pg_backend_pid() WHERE id="+QString::number(_id)+";");
+                                query.exec(action());
 
-                        if(query.lastError().isValid())
-                        {
-                            qDebug(logCritical())<<__FILE__<<__LINE__ <<getConnStr().name<<"SQL Error:"<<query.lastError();
-                            qDebug(logCritical())<<__FILE__<<__LINE__ <<query.lastError().nativeErrorCode();
-                            saveLogMessageDB(query.lastError().databaseText(), ThreadDB);
-                            //emit SystemEvent(EventTask::LostConnect);
-                            continue;
-                        }
-                        query.exec("UPDATE dbms_scheduler.jobs SET pid=NULL WHERE id="+QString::number(_id)+";");
-                        if(query.lastError().isValid())
-                        {
-                            qDebug(logCritical())<<__FILE__<<__LINE__ <<getConnStr().name<<"SQL Error:"<<query.lastError();
-                        }
-                    }
+                                if(query.lastError().isValid())
+                                {
+                                    qDebug(logCritical())<<__FILE__<<__LINE__ <<getConnStr().name<<"SQL Error:"<<query.lastError();
+                                    qDebug(logCritical())<<__FILE__<<__LINE__ <<query.lastError().nativeErrorCode();
+                                    saveLogMessageDB(query.lastError().databaseText(), ThreadDB);
+                                    //emit SystemEvent(EventTask::LostConnect);
+                                    continue;
+                                }
+                                query.exec("UPDATE dbms_scheduler.jobs SET pid=NULL WHERE id="+QString::number(_id)+";");
+                                if(query.lastError().isValid())
+                                {
+                                    qDebug(logCritical())<<__FILE__<<__LINE__ <<getConnStr().name<<"SQL Error:"<<query.lastError();
+                                }
+                                //close Connection from Task
+                                CloseConnection(ThreadDB);
+                                qDebug(logInfo())<<"end Work task id: "<<QString::number(_id)<<"DateTime End:"<<QDateTime::currentDateTime();
+                            }
 
-                    qDebug(logInfo())<<"end Work task id: "<<QString::number(_id)<<"DateTime End:"<<QDateTime::currentDateTime();
+                        }
+
+                        }
+
+
 
                 }
-            }
+
         }
-    }
-    else
-    {
-        qDebug(logInfo()) << "Trying to reconnect...";
-        ThreadDB.close();
-        while(!ThreadDB.open()){
-            if (ThreadDB.open()) {
-                qDebug(logInfo()) << "Reconnected!";
-            } else {
-                qDebug(logCritical())<<__FILE__<<__LINE__  << "Could not reconnect to the database. Next try in 2 seconds";
-            }
-            QThread::sleep(2);
-        }
-        emit SystemEvent(EventTask::LostConnect);
-    }
+
 }
 
 
