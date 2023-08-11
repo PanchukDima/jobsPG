@@ -8,17 +8,22 @@
 #include <QLoggingCategory>
 #include <QStandardPaths>
 #include <QSettings>
+#include <service.h>
 
 // Умный указатель на файл логирования
 QScopedPointer<QFile>   m_logFile;
 QString loggerLevel;
-QString version = "0.6.0";
+QString version = "0.7";
 // Объявляение обработчика
 void messageHandler(QtMsgType type, const QMessageLogContext &context, const QString &msg);
 
 int main(int argc, char *argv[])
 {
-    QCoreApplication a(argc, argv);
+    #ifdef __linux__
+        QCoreApplication a(argc, argv);
+   #elif _WIN32
+       Service a(argc, argv);
+   #endif
 
     QString logFilePath;
     QString logFileName = "PGworker"+QDate::currentDate().toString("MM_yyyy")+".log";
@@ -47,14 +52,25 @@ int main(int argc, char *argv[])
         loggerLevel = "INF";
     }
 
-    if (a.arguments().at(1) != "console")
-    {
-        qDebug()<<"No console";
+    #ifdef __linux__
+       if (a.arguments().count() > 1){
+           if (a.arguments().at(1) != "console")
+           {
+               qDebug()<<"No console";
+           }
+                   }
+                   else
+                   {
+                       qInstallMessageHandler(messageHandler);
+                   }
+    #else
         qInstallMessageHandler(messageHandler);
-    }
+    #endif
 
 
-    pgw->init();
+    #ifdef __linux__
+       pgw->init();
+   #endif
 
     return a.exec();
 }
