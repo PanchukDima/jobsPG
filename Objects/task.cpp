@@ -197,6 +197,19 @@ void Task::update()
 
 }
 
+bool Task::checkCorrectDateTimeStart(QDateTime nextRun)
+{
+    if(Freq.toLower() == "daily")
+    {
+        if (ByHour.toInt() ==  nextRun.toString("h").toInt())
+        {
+            return true;
+        }
+        return false;
+    }
+    return false;
+}
+
 
 
 bool Task::isStartedInterval()
@@ -210,8 +223,11 @@ bool Task::isStartedInterval()
             nextRun = getDataInterval().getNextStart(getLastRun());
         }
         if(nextRun<QDateTime::currentDateTime())
-        {            
+        {
+            if(checkCorrectDateTimeStart(nextRun))
+            {
                 return true;
+            }
         }
     }
     else
@@ -245,7 +261,6 @@ void Task::parseIntervalToDataInterval()
         {
             result.Interval = match.captured(2).toLower();
         }
-
         if(match.captured(1).toLower() == "byday")
         {
             result.ByWeekDay = match.captured(2).toLower();
@@ -399,9 +414,11 @@ void Task::run()
                 while(_enabled_job)
                 {
                     QThread::sleep(1);
+
                     if(isStartedInterval())
                     {
                         QSqlDatabase ThreadDB = OpenConnection();
+
                         if(ThreadDB.open())
                         {
                             qDebug(logInfo())<<"Execute action task id: "<<QString::number(_id)<<"DateTime Start:"<<QDateTime::currentDateTime();

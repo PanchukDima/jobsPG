@@ -9,6 +9,9 @@ linux-g++ | linux-g++-64 | linux-g++-32 {
   CONFIG += -openssl-linked
   PKGCONFIG+=openssl
 }
+win32 | win64 {
+include(qtservice/src/qtservice.pri)
+}
 
 # You can make your code fail to compile if it uses deprecated APIs.
 # In order to do so, uncomment the following line.
@@ -18,7 +21,8 @@ SOURCES += \
         Objects/logger.cpp \
         Objects/pgworker.cpp \
         Objects/task.cpp \
-        main.cpp
+        main.cpp \
+        service.cpp
 
 # Default rules for deployment.
 qnx: target.path = /tmp/$${TARGET}/bin
@@ -30,7 +34,8 @@ else: unix:!android: target.path = /opt/$${TARGET}/bin
 HEADERS += \
     Objects/logger.h \
     Objects/pgworker.h \
-    Objects/task.h
+    Objects/task.h \
+    service.h
 
 DISTFILES += \
     depends

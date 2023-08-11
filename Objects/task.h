@@ -231,6 +231,7 @@ public:
 
     void update();
 
+    bool checkCorrectDateTimeStart(QDateTime nextRun);
 
     bool isStartedInterval();
     void getNextStart();
