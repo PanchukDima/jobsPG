@@ -8,30 +8,24 @@
 #include <QLoggingCategory>
 #include <QStandardPaths>
 #include <QSettings>
-#include <service.h>
 
 // Умный указатель на файл логирования
 QScopedPointer<QFile>   m_logFile;
 QString loggerLevel;
-QString version = "0.7";
+QString version = "0.6.0";
 // Объявляение обработчика
 void messageHandler(QtMsgType type, const QMessageLogContext &context, const QString &msg);
 
 int main(int argc, char *argv[])
 {
-    #ifdef __linux__
-         QCoreApplication a(argc, argv);
-    #elif _WIN32
-        Service a(argc, argv);
-    #endif
-
+    QCoreApplication a(argc, argv);
 
     QString logFilePath;
     QString logFileName = "PGworker"+QDate::currentDate().toString("MM_yyyy")+".log";
     #ifdef __linux__
         logFilePath = "/var/log/jobsPG/";
     #elif _WIN32
-        logFilePath = QStandardPaths::writableLocation(QStandardPaths::HomeLocation)+"/";
+        logFilePath = QStandardPaths::writableLocation(QStandardPaths::TempLocation);
     #endif
     QDir log(logFilePath);
     if(!log.exists())
@@ -39,7 +33,7 @@ int main(int argc, char *argv[])
         log.mkdir(logFilePath);
     }
     m_logFile.reset(new QFile(logFilePath+logFileName));
-    qDebug()<<logFilePath+logFileName;
+
     m_logFile.data()->open(QFile::Append | QFile::Text);
     PGWorker *pgw = new PGWorker();
     QString configPath = pgw->getFileConfigPath();
@@ -52,23 +46,15 @@ int main(int argc, char *argv[])
     {
         loggerLevel = "INF";
     }
-    #ifdef __linux__
-        if (a.arguments().count() > 1){
-            if (a.arguments().at(1) != "console")
-            {
-                qDebug()<<"No console";
 
-            }
-        }
-        else
-        {
-            qInstallMessageHandler(messageHandler);
-        }
-    #endif
+    if (a.arguments().at(1) != "console")
+    {
+        qDebug()<<"No console";
+        qInstallMessageHandler(messageHandler);
+    }
 
-    #ifdef __linux__
-        pgw->init();
-    #endif
+
+    pgw->init();
 
     return a.exec();
 }
@@ -76,7 +62,6 @@ int main(int argc, char *argv[])
 void messageHandler(QtMsgType type, const QMessageLogContext &context, const QString &msg)
 {
     // Открываем поток записи в файл
-
     QTextStream out(m_logFile.data());
     // Записываем дату записи
     bool iswrite = false;

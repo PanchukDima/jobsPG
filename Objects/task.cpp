@@ -199,9 +199,9 @@ void Task::update()
 
 bool Task::checkCorrectDateTimeStart(QDateTime nextRun)
 {
-    if(Freq.toLower() == "daily")
+    if(getDataInterval().Freq.toLower() == "daily")
     {
-        if (ByHour.toInt() ==  nextRun.toString("h").toInt())
+        if (getDataInterval().ByHour.toInt() ==  nextRun.toString("h").toInt())
         {
             return true;
         }

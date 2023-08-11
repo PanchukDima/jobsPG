@@ -1,0 +1,14 @@
+[Unit]
+Description=Jobs Processing Service PostgreSql
+Requires=postgresql.service
+After=postgresql.service
+
+
+[Service]
+Type=simple
+ExecStart=/usr/bin/bash /usr/bin/jobsPG &
+ExecReload=/bin/kill -9 $MAINPID
+ExecStop= /bin/kill -9 $MAINPID
+
+[Install]
+WantedBy=multi-user.target
