@@ -9,9 +9,10 @@ linux-g++ | linux-g++-64 | linux-g++-32 {
   CONFIG += -openssl-linked
   PKGCONFIG+=openssl
 }
-win32 | win64 {
-include(qtservice/src/qtservice.pri)
-}
+
+
+    include(qtservice/src/qtservice.pri)
+
 
 # You can make your code fail to compile if it uses deprecated APIs.
 # In order to do so, uncomment the following line.

@@ -4,7 +4,7 @@
 #include <QCoreApplication>
 #include <QObject>
 #include <QDebug>
-#include <qtservice.h>
+#include <qtservice/src/qtservice.h>
 
 class Service : public QtService<QCoreApplication>
 {

@@ -8,8 +8,9 @@
 #include <QLoggingCategory>
 #include <QStandardPaths>
 #include <QSettings>
-#include <service.h>
-
+#ifdef _WIN32
+    #include <service.h>
+#endif
 // Умный указатель на файл логирования
 QScopedPointer<QFile>   m_logFile;
 QString loggerLevel;
