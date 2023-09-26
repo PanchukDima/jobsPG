@@ -5,7 +5,7 @@ CONFIG += c++17
 CONFIG -= app_bundle
 
 linux-g++ | linux-g++-64 | linux-g++-32 {
-  LIBS+=-lssl -lcrypto
+  LIBS+=-lssl -lcrypto -I /usr/local/pgsql/include -L /usr/local/pgsql/lib -lpq
   CONFIG += -openssl-linked
   PKGCONFIG+=openssl
 }

@@ -38,7 +38,15 @@ void PGWorker::init()
 
 QString PGWorker::getFileConfigPath()
 {
-    return QStandardPaths::standardLocations(QStandardPaths::AppConfigLocation)[1]+"/connection";
+    QByteArray evnConfigPath = qgetenv("CONFIG_PATH");
+    if (evnConfigPath.size()>0)
+    {
+        return evnConfigPath;
+    }
+    else
+    {
+        return QStandardPaths::standardLocations(QStandardPaths::AppConfigLocation)[1]+"/connection";
+    }
 }
 
 

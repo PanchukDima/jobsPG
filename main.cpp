@@ -14,7 +14,7 @@
 // Умный указатель на файл логирования
 QScopedPointer<QFile>   m_logFile;
 QString loggerLevel;
-QString version = "0.7";
+QString version = "0.8";
 // Объявляение обработчика
 void messageHandler(QtMsgType type, const QMessageLogContext &context, const QString &msg);
 

@@ -201,13 +201,13 @@ bool Task::checkCorrectDateTimeStart(QDateTime nextRun)
 {
     if(getDataInterval().Freq.toLower() == "daily")
     {
-        if (getDataInterval().ByHour.toInt() ==  nextRun.toString("h").toInt())
+        if (getDataInterval().ByHour.toInt() ==  QDateTime::currentDateTime().toString("h").toInt())
         {
             return true;
         }
         return false;
     }
-    return false;
+    return true;
 }
 
 
