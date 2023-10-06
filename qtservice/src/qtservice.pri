@@ -19,3 +19,6 @@ win32 {
     qtservice-buildlib:shared:DEFINES += QT_QTSERVICE_EXPORT
     else:qtservice-uselib:DEFINES += QT_QTSERVICE_IMPORT
 }
+
+DISTFILES += \
+    $$PWD/config.pri
