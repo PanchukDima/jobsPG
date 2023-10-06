@@ -27,7 +27,13 @@ int main(int argc, char *argv[])
    #endif
 
     QString logFilePath;
-    QString logFileName = "PGworker"+QDate::currentDate().toString("MM_yyyy")+".log";
+    QByteArray evnConfigPath = qgetenv("CONFIG_PATH");
+    QString logFileName="PGworker"+QDate::currentDate().toString("MM_yyyy");
+    if (evnConfigPath.size()>0)
+    {
+        logFileName = logFileName + "_env";
+    }
+    logFileName = logFileName +".log";
     #ifdef __linux__
         logFilePath = "/var/log/jobsPG/";
     #elif _WIN32
